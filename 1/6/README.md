@@ -1,0 +1,1 @@
+This Assembler follows the specification set in the following pdf: https://www.nand2tetris.org/_files/ugd/44046b_89a8e226476741a3b7c5204575b8a0b2.pdf

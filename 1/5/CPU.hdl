@@ -1,0 +1,44 @@
+CHIP CPU {
+    IN  inM[16],         // M value input  (M = contents of RAM[A])
+        instruction[16], // Instruction for execution
+        reset;           // Signals whether to re-start the current program (reset==1) or continue executing the current program (reset==0).
+
+    OUT outM[16],        // M value output
+        writeM,          // Write to M? 
+        addressM[15],    // Address in data memory (of M)
+        pc[15];          // address of next instruction
+
+    PARTS:
+
+    Not(in= instruction[15], out= isAInstruction);
+    Or(a= instruction[15], b= false, out= isCInstruction);
+
+    And(a= instruction[5], b= isCInstruction, out= writeCToA);
+    Or(a= isAInstruction, b= writeCToA, out= loadA);
+
+    Mux16(a= instruction, b= ALUOut, sel= writeCToA, out= aIn);
+    ARegister(in= aIn, load= loadA, out= aOut, out[0..14]= addressM);
+
+    Mux16(a= aOut, b= inM, sel= instruction[12], out= aOrM);
+
+    And(a= instruction[4], b= isCInstruction, out= loadD);
+    DRegister(in= ALUOut, load= loadD, out= dOut);
+    ALU(x= dOut, y= aOrM, zx= instruction[11], nx= instruction[10], zy= instruction[9], ny= instruction[8], f= instruction[7], no= instruction[6], out= ALUOut, out= outM, zr= isZero, ng= isNeg);
+
+    And(a= instruction[3], b= isCInstruction, out= writeM);
+
+    Not(in= isNeg, out= isPositive);
+    Not(in= isZero, out= isNotZero);
+    And(a= isPositive, b= isNotZero, out= isGreaterThanZero);
+
+    And(a= isNeg, b= instruction[2], out= JLT);
+    And(a= isZero, b= instruction[1], out= JEQ);
+    And(a= isGreaterThanZero, b= instruction[0], out= JGT);
+
+    Or(a= JLT, b= JEQ, out= JLE);
+    Or(a= JLE, b= JGT, out= JMP);
+
+    And(a= isCInstruction, b= JMP, out= loadPC);
+    Not(in= loadPC, out= incPC);
+    PC(in= aOut, load= loadPC, inc= incPC, reset= reset, out[0..14]= pc);
+}
